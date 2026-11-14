@@ -1,0 +1,43 @@
+{
+  "name": "erechnung-check",
+  "version": "0.1.0",
+  "description": "Prüft, ob eine Rechnung eine echte E-Rechnung ist: XRechnung (UBL/CII) und ZUGFeRD / Factur-X erkennen, Belegdaten auslesen und EN-16931-Kernpflichtfelder prüfen. Läuft lokal, ohne Upload.",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "bin": {
+    "erechnung-check": "bin/cli.js"
+  },
+  "files": [
+    "src/",
+    "bin/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node test/core.test.mjs"
+  },
+  "keywords": [
+    "e-rechnung",
+    "xrechnung",
+    "zugferd",
+    "factur-x",
+    "en16931",
+    "invoice",
+    "ubl",
+    "cii",
+    "germany",
+    "validator"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@xmldom/xmldom": "^0.9.8"
+  },
+  "license": "MIT",
+  "author": "AllDesk (S.G Beratungs- und Verwaltungs GmbH)",
+  "homepage": "https://www.alldesk-erp.de/e-rechnung-pruefen.html"
+}

@@ -1,0 +1,489 @@
+<title>AllDesk E-Rechnung-Checker</title>
+<style>
+  :root{
+    --bg:#F6F7F9; --surface:#FFFFFF; --surface-2:#F1F3F7; --border:#E3E7EE;
+    --ink:#0F1729; --muted:#5B6472; --accent:#2563EB; --accent-weak:#EAF0FE;
+    --ok:#15803D; --ok-bg:#E7F6EC; --ok-bd:#BBE3C7;
+    --warn:#B45309; --warn-bg:#FCF1DD; --warn-bd:#F0D9A8;
+    --bad:#B91C1C; --bad-bg:#FBE9E9; --bad-bd:#F1C7C7;
+    --shadow:0 1px 2px rgba(15,23,41,.06),0 8px 24px rgba(15,23,41,.06);
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,"Cascadia Mono","Roboto Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0B1020; --surface:#131B2E; --surface-2:#0F1728; --border:#26314A;
+      --ink:#E7EBF3; --muted:#95A1B5; --accent:#5B8DEF; --accent-weak:#182741;
+      --ok:#5BE08A; --ok-bg:#12261B; --ok-bd:#1E4230;
+      --warn:#FBBF24; --warn-bg:#2A2109; --warn-bd:#4A3A12;
+      --bad:#F97070; --bad-bg:#2A1414; --bad-bd:#4A2020;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#F6F7F9; --surface:#FFFFFF; --surface-2:#F1F3F7; --border:#E3E7EE;
+    --ink:#0F1729; --muted:#5B6472; --accent:#2563EB; --accent-weak:#EAF0FE;
+    --ok:#15803D; --ok-bg:#E7F6EC; --ok-bd:#BBE3C7;
+    --warn:#B45309; --warn-bg:#FCF1DD; --warn-bd:#F0D9A8;
+    --bad:#B91C1C; --bad-bg:#FBE9E9; --bad-bd:#F1C7C7;
+    --shadow:0 1px 2px rgba(15,23,41,.06),0 8px 24px rgba(15,23,41,.06);
+  }
+  :root[data-theme="dark"]{
+    --bg:#0B1020; --surface:#131B2E; --surface-2:#0F1728; --border:#26314A;
+    --ink:#E7EBF3; --muted:#95A1B5; --accent:#5B8DEF; --accent-weak:#182741;
+    --ok:#5BE08A; --ok-bg:#12261B; --ok-bd:#1E4230;
+    --warn:#FBBF24; --warn-bg:#2A2109; --warn-bd:#4A3A12;
+    --bad:#F97070; --bad-bg:#2A1414; --bad-bd:#4A2020;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35);
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+    line-height:1.5;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1000px;margin:0 auto;padding:32px 20px 80px;}
+
+  header.top{display:flex;align-items:center;gap:14px;margin-bottom:8px;}
+  .logo{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#1E40AF);
+    display:grid;place-items:center;color:#fff;font-weight:800;font-size:20px;flex:none;
+    box-shadow:0 4px 12px rgba(37,99,235,.35);}
+  .brand h1{font-size:20px;margin:0;letter-spacing:-.01em;font-weight:750;}
+  .brand p{margin:0;color:var(--muted);font-size:12.5px;letter-spacing:.02em;}
+  .lead{color:var(--muted);font-size:14.5px;max-width:64ch;margin:18px 0 22px;}
+  .lead b{color:var(--ink);font-weight:650;}
+
+  .drop{border:1.5px dashed var(--border);background:var(--surface);border-radius:16px;
+    padding:34px 24px;text-align:center;transition:border-color .15s,background .15s;cursor:pointer;
+    box-shadow:var(--shadow);}
+  .drop:hover,.drop.hot{border-color:var(--accent);background:var(--accent-weak);}
+  .drop .big{font-size:16px;font-weight:650;margin:0 0 4px;}
+  .drop .sub{color:var(--muted);font-size:13px;margin:0;}
+  .drop .cta{display:inline-block;margin-top:14px;background:var(--accent);color:#fff;
+    font-weight:600;font-size:13.5px;padding:9px 18px;border-radius:9px;border:0;cursor:pointer;}
+  .icon-dz{width:34px;height:34px;margin:0 auto 10px;display:block;color:var(--accent);}
+
+  .summary{display:flex;flex-wrap:wrap;gap:10px;margin:22px 0 6px;align-items:center;}
+  .summary.hidden{display:none;}
+  .chip{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;
+    padding:6px 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface);}
+  .chip .dot{width:8px;height:8px;border-radius:50%;}
+  .chip.ok{color:var(--ok);border-color:var(--ok-bd);background:var(--ok-bg);}
+  .chip.ok .dot{background:var(--ok);}
+  .chip.warn{color:var(--warn);border-color:var(--warn-bd);background:var(--warn-bg);}
+  .chip.warn .dot{background:var(--warn);}
+  .chip.bad{color:var(--bad);border-color:var(--bad-bd);background:var(--bad-bg);}
+  .chip.bad .dot{background:var(--bad);}
+  .clearbtn{margin-left:auto;background:none;border:1px solid var(--border);color:var(--muted);
+    font-size:12.5px;padding:6px 12px;border-radius:8px;cursor:pointer;font-weight:600;}
+  .clearbtn:hover{color:var(--ink);border-color:var(--muted);}
+
+  .cards{display:flex;flex-direction:column;gap:16px;margin-top:18px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    box-shadow:var(--shadow);overflow:hidden;animation:rise .28s ease both;}
+  @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.card{animation:none}}
+
+  .card-head{display:flex;align-items:flex-start;gap:14px;padding:16px 18px;border-bottom:1px solid var(--border);}
+  .card-head .stripe{width:4px;align-self:stretch;border-radius:4px;flex:none;margin:-16px 0 -16px;}
+  .fname{font-weight:650;font-size:14.5px;word-break:break-all;}
+  .fmeta{color:var(--muted);font-size:12.5px;margin-top:2px;}
+  .badge{margin-left:auto;flex:none;display:inline-flex;align-items:center;gap:8px;
+    font-weight:700;font-size:13px;padding:8px 14px;border-radius:10px;white-space:nowrap;}
+  .badge svg{width:16px;height:16px;}
+  .b-ok{color:var(--ok);background:var(--ok-bg);border:1px solid var(--ok-bd);}
+  .b-warn{color:var(--warn);background:var(--warn-bg);border:1px solid var(--warn-bd);}
+  .b-bad{color:var(--bad);background:var(--bad-bg);border:1px solid var(--bad-bd);}
+  .stripe.s-ok{background:var(--ok);}.stripe.s-warn{background:var(--warn);}.stripe.s-bad{background:var(--bad);}
+
+  .card-body{display:grid;grid-template-columns:1fr 1fr;gap:0;}
+  @media (max-width:680px){.card-body{grid-template-columns:1fr}}
+  .panel{padding:16px 18px;}
+  .panel + .panel{border-left:1px solid var(--border);}
+  @media (max-width:680px){.panel + .panel{border-left:0;border-top:1px solid var(--border)}}
+  .panel h3{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);
+    margin:0 0 12px;font-weight:700;}
+
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:7px 14px;font-size:13.5px;}
+  .kv dt{color:var(--muted);}
+  .kv dd{margin:0;text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;
+    word-break:break-word;}
+  .kv dd.strong{font-weight:650;}
+  .kv dd.dim{color:var(--muted);font-family:var(--sans);}
+
+  ul.checks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;}
+  ul.checks li{display:flex;align-items:flex-start;gap:9px;font-size:13px;}
+  ul.checks li svg{width:15px;height:15px;flex:none;margin-top:2px;}
+  li.c-ok svg{color:var(--ok);} li.c-bad svg{color:var(--bad);}
+  li.c-bad{color:var(--muted);}
+  .checks .bt{color:var(--muted);font-size:11px;font-family:var(--mono);margin-left:4px;}
+
+  .note{padding:12px 18px;background:var(--surface-2);border-top:1px solid var(--border);
+    font-size:12.5px;color:var(--muted);}
+  .note.bad-note{color:var(--bad);background:var(--bad-bg);}
+
+  footer{margin-top:34px;color:var(--muted);font-size:12px;text-align:center;line-height:1.7;}
+  footer .lock{color:var(--ok);font-weight:600;}
+  a{color:var(--accent);}
+  .spin{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);
+    border-radius:50%;animation:sp .7s linear infinite;display:inline-block;vertical-align:-3px;}
+  @keyframes sp{to{transform:rotate(360deg)}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="logo">A</div>
+    <div class="brand">
+      <h1>E-Rechnung-Checker</h1>
+      <p>AllDesk · Softwareentwicklung · KI-Werkstatt</p>
+    </div>
+  </header>
+
+  <p class="lead">Prüft eingehende Rechnungen automatisch: <b>Ist das eine echte E-Rechnung?</b>
+    Erkennt <b>XRechnung</b> (UBL/CII) und <b>ZUGFeRD / Factur-X</b> (PDF mit eingebettetem XML),
+    liest die Belegdaten direkt aus dem XML und prüft die EN-16931-Pflichtfelder.</p>
+
+  <div class="drop" id="drop" tabindex="0" role="button" aria-label="Rechnungen auswählen oder hierher ziehen">
+    <svg class="icon-dz" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M20 16v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2"/></svg>
+    <p class="big">Rechnungen hierher ziehen</p>
+    <p class="sub">PDF (ZUGFeRD/Factur-X) oder XML (XRechnung) · mehrere Dateien möglich</p>
+    <button class="cta" type="button" id="pick">Dateien auswählen</button>
+    <input type="file" id="file" accept=".pdf,.xml" multiple hidden>
+  </div>
+
+  <div class="summary hidden" id="summary">
+    <span class="chip ok"><span class="dot"></span><span id="c-ok">0</span> gültige E-Rechnung</span>
+    <span class="chip warn"><span class="dot"></span><span id="c-warn">0</span> unvollständig</span>
+    <span class="chip bad"><span class="dot"></span><span id="c-bad">0</span> keine E-Rechnung</span>
+    <button class="clearbtn" id="clear">Zurücksetzen</button>
+  </div>
+
+  <div class="cards" id="cards"></div>
+
+  <footer>
+    <div><span class="lock">🔒 Läuft vollständig lokal</span> – keine Rechnung verlässt deinen Rechner, keine Cloud, keine KI.</div>
+    <div>Eigenständiges Werkzeug von AllDesk. Prüfung nach EN 16931 (Kernfelder).</div>
+  </footer>
+</div>
+
+<script>
+"use strict";
+/* ---------- XML-Helfer (namespace-unabhängig über localName) ---------- */
+function desc(node,name){const o=[];if(!node)return o;const a=node.getElementsByTagName("*");for(let i=0;i<a.length;i++){if(a[i].localName===name)o.push(a[i]);}return o;}
+function firstDesc(node,name){if(!node)return null;const a=node.getElementsByTagName("*");for(let i=0;i<a.length;i++){if(a[i].localName===name)return a[i];}return null;}
+function child(node,name){if(!node)return null;for(const el of node.children){if(el.localName===name)return el;}return null;}
+function txt(node){return node?node.textContent.trim():"";}
+
+/* ---------- Datum & Beträge formatieren ---------- */
+function fmtDate(raw,fmt){
+  if(!raw)return "";
+  let r=raw.trim();
+  if(fmt==="102"||/^\d{8}$/.test(r)){return r.slice(6,8)+"."+r.slice(4,6)+"."+r.slice(0,4);}
+  const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(r);
+  if(m)return m[3]+"."+m[2]+"."+m[1];
+  return r;
+}
+function fmtMoney(raw,cur){
+  if(raw===""||raw==null)return "—";
+  const n=parseFloat(raw);
+  if(isNaN(n))return raw;
+  try{return new Intl.NumberFormat("de-DE",{style:"currency",currency:(cur||"EUR")}).format(n);}
+  catch(e){return n.toFixed(2)+" "+(cur||"");}
+}
+
+/* ---------- Text aus Bytes dekodieren (BOM-bewusst) ---------- */
+function decodeXmlBytes(bytes){
+  if(bytes.length>=3&&bytes[0]===0xEF&&bytes[1]===0xBB&&bytes[2]===0xBF)
+    return new TextDecoder("utf-8").decode(bytes.subarray(3));
+  if(bytes.length>=2&&bytes[0]===0xFF&&bytes[1]===0xFE)
+    return new TextDecoder("utf-16le").decode(bytes.subarray(2));
+  if(bytes.length>=2&&bytes[0]===0xFE&&bytes[1]===0xFF)
+    return new TextDecoder("utf-16be").decode(bytes.subarray(2));
+  return new TextDecoder("utf-8").decode(bytes);
+}
+
+/* ---------- Eingebettetes XML aus PDF (ZUGFeRD/Factur-X) holen ---------- */
+async function inflate(bytes,fmt){
+  const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream(fmt));
+  const buf=await new Response(stream).arrayBuffer();
+  return new Uint8Array(buf);
+}
+function looksLikeInvoiceXml(t){
+  return /CrossIndustryInvoice/.test(t) || /<([a-zA-Z]+:)?Invoice[\s>]/.test(t) ||
+         /<([a-zA-Z]+:)?CreditNote[\s>]/.test(t) || /ExchangedDocument/.test(t);
+}
+async function extractXmlFromPdf(buffer){
+  const bytes=new Uint8Array(buffer);
+  const latin=new TextDecoder("latin1").decode(bytes);
+  let idx=0;
+  while(true){
+    const s=latin.indexOf("stream",idx);
+    if(s<0)break;
+    idx=s+6;
+    if(s>=3&&latin.substr(s-3,3)==="end")continue;         // "endstream" überspringen
+    // Datenbeginn nach stream + EOL
+    let ds=s+6;
+    if(latin[ds]==="\r")ds++;
+    if(latin[ds]==="\n")ds++;
+    const e=latin.indexOf("endstream",ds);
+    if(e<0)break;
+    let ee=e;
+    if(latin[ee-1]==="\n")ee--;
+    if(latin[ee-1]==="\r")ee--;
+    const dict=latin.substring(Math.max(0,s-400),s);
+    const raw=bytes.subarray(ds,ee);
+    let decoded=null;
+    if(/FlateDecode/.test(dict)){
+      try{decoded=await inflate(raw,"deflate");}catch(e1){
+        try{decoded=await inflate(raw,"deflate-raw");}catch(e2){decoded=null;}
+      }
+    }else{
+      decoded=raw;
+    }
+    if(decoded){
+      const sniff=new TextDecoder("latin1").decode(decoded.subarray(0,Math.min(decoded.length,3000)));
+      if(looksLikeInvoiceXml(sniff))return decodeXmlBytes(decoded);
+    }
+  }
+  return null;
+}
+
+/* ---------- Profil-Erkennung ---------- */
+function friendlyProfile(p){
+  if(!p)return "";
+  const lc=p.toLowerCase();
+  let sub="";
+  if(lc.includes("minimum"))sub="Minimum";
+  else if(lc.includes("basicwl"))sub="Basic WL";
+  else if(lc.includes("basic"))sub="Basic";
+  else if(lc.includes("en16931")||lc.includes("comfort"))sub="EN 16931 / Comfort";
+  else if(lc.includes("extended"))sub="Extended";
+  if(lc.includes("xrechnung"))return sub?("XRechnung · "+sub):"XRechnung";
+  return sub||p;
+}
+
+/* ---------- XML -> normalisierte Rechnung ---------- */
+function parseInvoice(xmlText){
+  const doc=new DOMParser().parseFromString(xmlText,"application/xml");
+  if(doc.getElementsByTagName("parsererror").length)throw new Error("XML nicht lesbar");
+  const root=doc.documentElement;
+  const rn=root.localName;
+  const inv={standard:"",syntax:"",profile:"",number:"",date:"",typeCode:"",currency:"",
+    sellerName:"",sellerVat:"",sellerTax:"",buyerName:"",net:"",tax:"",gross:"",
+    lineCount:0,taxBreakdownCount:0};
+
+  if(rn==="CrossIndustryInvoice"){
+    inv.standard="CII";inv.syntax="UN/CEFACT CII";
+    const ctx=firstDesc(root,"ExchangedDocumentContext");
+    const guide=firstDesc(ctx,"GuidelineSpecifiedDocumentContextParameter");
+    inv.profile=txt(firstDesc(guide,"ID"));
+    const exDoc=firstDesc(root,"ExchangedDocument");
+    inv.number=txt(firstDesc(exDoc,"ID"));
+    inv.typeCode=txt(firstDesc(exDoc,"TypeCode"));
+    const dt=firstDesc(exDoc,"DateTimeString");
+    inv.date=fmtDate(txt(dt),dt?dt.getAttribute("format"):null);
+    inv.currency=txt(firstDesc(root,"InvoiceCurrencyCode"));
+    const seller=firstDesc(root,"SellerTradeParty");
+    inv.sellerName=txt(firstDesc(seller,"Name"));
+    for(const reg of desc(seller,"SpecifiedTaxRegistration")){
+      const id=firstDesc(reg,"ID");if(!id)continue;
+      const sch=id.getAttribute("schemeID");
+      if(sch==="VA")inv.sellerVat=txt(id);
+      else if(sch==="FC")inv.sellerTax=txt(id);
+      else if(!inv.sellerVat)inv.sellerVat=txt(id);
+    }
+    inv.buyerName=txt(firstDesc(firstDesc(root,"BuyerTradeParty"),"Name"));
+    const sum=firstDesc(root,"SpecifiedTradeSettlementHeaderMonetarySummation");
+    inv.gross=txt(firstDesc(sum,"GrandTotalAmount"));
+    inv.net=txt(firstDesc(sum,"TaxBasisTotalAmount"));
+    inv.tax=txt(firstDesc(sum,"TaxTotalAmount"));
+    inv.lineCount=desc(root,"IncludedSupplyChainTradeLineItem").length;
+    const settle=firstDesc(root,"ApplicableHeaderTradeSettlement");
+    inv.taxBreakdownCount=desc(settle,"ApplicableTradeTax").length;
+  }else if(rn==="Invoice"||rn==="CreditNote"){
+    inv.standard="UBL";inv.syntax="OASIS UBL";
+    inv.profile=txt(child(root,"CustomizationID"));
+    inv.number=txt(child(root,"ID"));
+    inv.date=fmtDate(txt(child(root,"IssueDate")));
+    inv.typeCode=txt(child(root,"InvoiceTypeCode"))||txt(child(root,"CreditNoteTypeCode"));
+    inv.currency=txt(child(root,"DocumentCurrencyCode"));
+    const sp=firstDesc(root,"AccountingSupplierParty"),spParty=firstDesc(sp,"Party");
+    inv.sellerName=txt(firstDesc(spParty,"RegistrationName"))||txt(firstDesc(firstDesc(spParty,"PartyName"),"Name"));
+    for(const pts of desc(spParty,"PartyTaxScheme")){
+      const cid=firstDesc(pts,"CompanyID");if(!cid)continue;
+      const scheme=txt(firstDesc(firstDesc(pts,"TaxScheme"),"ID"));
+      if(scheme==="VAT")inv.sellerVat=txt(cid);else if(!inv.sellerTax)inv.sellerTax=txt(cid);
+    }
+    const cp=firstDesc(root,"AccountingCustomerParty"),cpParty=firstDesc(cp,"Party");
+    inv.buyerName=txt(firstDesc(cpParty,"RegistrationName"))||txt(firstDesc(firstDesc(cpParty,"PartyName"),"Name"));
+    const lmt=firstDesc(root,"LegalMonetaryTotal");
+    inv.gross=txt(firstDesc(lmt,"TaxInclusiveAmount"));
+    inv.net=txt(firstDesc(lmt,"TaxExclusiveAmount"));
+    const tt=firstDesc(root,"TaxTotal");
+    inv.tax=txt(firstDesc(tt,"TaxAmount"));
+    inv.lineCount=desc(root,"InvoiceLine").length||desc(root,"CreditNoteLine").length;
+    inv.taxBreakdownCount=desc(tt,"TaxSubtotal").length;
+  }else{
+    throw new Error("Kein bekanntes E-Rechnungsformat (Wurzel: "+rn+")");
+  }
+  inv.profileFriendly=friendlyProfile(inv.profile);
+  return inv;
+}
+
+/* ---------- EN-16931-Pflichtfeld-Prüfung ---------- */
+function validate(inv){
+  const has=v=>v!=null&&String(v).trim()!=="";
+  const checks=[
+    ["Rechnungsnummer","BT-1",has(inv.number)],
+    ["Rechnungsdatum","BT-2",has(inv.date)],
+    ["Rechnungsart (Typ-Code)","BT-3",has(inv.typeCode)],
+    ["Währung","BT-5",has(inv.currency)],
+    ["Verkäufer-Name","BT-27",has(inv.sellerName)],
+    ["USt-IdNr. / Steuernummer Verkäufer","BT-31/32",has(inv.sellerVat)||has(inv.sellerTax)],
+    ["Käufer-Name","BT-44",has(inv.buyerName)],
+    ["Gesamtbetrag netto","BT-109",has(inv.net)],
+    ["USt-Betrag gesamt","BT-110",has(inv.tax)],
+    ["Zahlbetrag / brutto","BT-112",has(inv.gross)],
+    ["Mind. eine Rechnungsposition","BG-25",inv.lineCount>0],
+    ["USt-Aufschlüsselung","BG-23",inv.taxBreakdownCount>0],
+  ].map(c=>({label:c[0],bt:c[1],ok:c[2]}));
+  const missing=checks.filter(c=>!c.ok).length;
+  return {checks,missing,valid:missing===0};
+}
+
+/* ---------- Eine Datei verarbeiten ---------- */
+async function processFile(file){
+  const buf=await file.arrayBuffer();
+  const head=new TextDecoder("latin1").decode(new Uint8Array(buf,0,Math.min(buf.byteLength,1024)));
+  const isPdf=head.startsWith("%PDF")||/\.pdf$/i.test(file.name);
+  const isXml=(/^﻿?\s*<\?xml/.test(head)||/<([a-zA-Z]+:)?(Invoice|CrossIndustryInvoice|CreditNote)/.test(head)||/\.xml$/i.test(file.name))&&!isPdf;
+
+  let xmlText=null, container="";
+  if(isPdf){
+    container="PDF";
+    if(typeof DecompressionStream==="undefined")
+      return {status:"error",container,msg:"Dieser Browser kann eingebettete PDF-Daten nicht entpacken (DecompressionStream fehlt). Bitte Chrome, Edge oder Safari 16.4+ nutzen."};
+    xmlText=await extractXmlFromPdf(buf);
+    if(!xmlText)
+      return {status:"bad",container,msg:"Kein eingebettetes XML gefunden – das ist eine normale PDF-Rechnung oder ein Scan, keine E-Rechnung nach EN 16931."};
+  }else if(isXml){
+    container="XML";
+    xmlText=decodeXmlBytes(new Uint8Array(buf));
+  }else{
+    return {status:"bad",container:"?",msg:"Unbekanntes Dateiformat – weder XML noch PDF mit E-Rechnungsdaten."};
+  }
+
+  let inv;
+  try{inv=parseInvoice(xmlText);}
+  catch(e){return {status:"error",container,msg:"Datei enthält XML, aber keine gültige E-Rechnung: "+e.message};}
+  const val=validate(inv);
+  return {status:val.valid?"ok":"warn",container,inv,val};
+}
+
+/* ---------- Rendern ---------- */
+const ICON={
+  ok:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+  bad:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+  warn:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>',
+};
+const state={ok:0,warn:0,bad:0};
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+
+function formatLabel(r){
+  if(r.status==="bad")return r.container==="PDF"?"Normale PDF / Scan":"Kein E-Rechnungsformat";
+  const inv=r.inv;
+  if(r.container==="PDF")return "ZUGFeRD / Factur-X";
+  return inv.standard==="CII"?"XRechnung (CII)":"XRechnung (UBL)";
+}
+
+function renderCard(file,r){
+  const sev=r.status==="ok"?"ok":(r.status==="warn"?"warn":"bad");
+  const badgeTxt=r.status==="ok"?"E-Rechnung · gültig":
+                 r.status==="warn"?("E-Rechnung · "+r.val.missing+" Pflichtfeld"+(r.val.missing>1?"er":"")+" fehlen"):
+                 r.status==="bad"?"Keine E-Rechnung":"Fehler";
+  const badgeCls=r.status==="ok"?"b-ok":(r.status==="warn"?"b-warn":"b-bad");
+  const badgeIcon=r.status==="ok"?ICON.ok:(r.status==="warn"?ICON.warn:ICON.bad);
+
+  let body="";
+  if(r.inv){
+    const inv=r.inv;
+    body=`<div class="card-body">
+      <div class="panel">
+        <h3>Ausgelesene Belegdaten</h3>
+        <dl class="kv">
+          <dt>Format</dt><dd class="strong">${esc(formatLabel(r))}</dd>
+          <dt>Syntax / Profil</dt><dd class="dim">${esc(inv.syntax)}${inv.profileFriendly?" · "+esc(inv.profileFriendly):""}</dd>
+          <dt>Rechnungs-Nr.</dt><dd>${esc(inv.number)||"—"}</dd>
+          <dt>Datum</dt><dd>${esc(inv.date)||"—"}</dd>
+          <dt>Lieferant</dt><dd class="dim">${esc(inv.sellerName)||"—"}</dd>
+          <dt>USt-IdNr.</dt><dd>${esc(inv.sellerVat||inv.sellerTax)||"—"}</dd>
+          <dt>Empfänger</dt><dd class="dim">${esc(inv.buyerName)||"—"}</dd>
+          <dt>Netto</dt><dd>${fmtMoney(inv.net,inv.currency)}</dd>
+          <dt>USt</dt><dd>${fmtMoney(inv.tax,inv.currency)}</dd>
+          <dt>Brutto</dt><dd class="strong">${fmtMoney(inv.gross,inv.currency)}</dd>
+        </dl>
+      </div>
+      <div class="panel">
+        <h3>EN 16931 · Pflichtfelder</h3>
+        <ul class="checks">
+          ${r.val.checks.map(c=>`<li class="${c.ok?"c-ok":"c-bad"}">${c.ok?ICON.ok:ICON.bad}<span>${esc(c.label)}<span class="bt">${c.bt}</span></span></li>`).join("")}
+        </ul>
+      </div>
+    </div>`;
+  }
+  let note="";
+  if(r.msg)note=`<div class="note ${r.status==="bad"||r.status==="error"?"bad-note":""}">${esc(r.msg)}</div>`;
+  else if(r.status==="warn")note=`<div class="note">Enthält gültige E-Rechnungsdaten, aber es fehlen Kern-Pflichtfelder nach EN 16931. Ggf. beim Lieferanten nachfordern.</div>`;
+
+  const el=document.createElement("div");
+  el.className="card";
+  el.innerHTML=`<div class="card-head">
+      <div class="stripe s-${sev}"></div>
+      <div>
+        <div class="fname">${esc(file.name)}</div>
+        <div class="fmeta">${(file.size/1024).toFixed(0)} KB · ${r.container||"?"}</div>
+      </div>
+      <span class="badge ${badgeCls}">${badgeIcon}${esc(badgeTxt)}</span>
+    </div>${body}${note}`;
+  return el;
+}
+
+/* ---------- UI-Verdrahtung ---------- */
+const drop=document.getElementById("drop"),input=document.getElementById("file"),
+      cards=document.getElementById("cards"),summary=document.getElementById("summary");
+
+function refreshSummary(){
+  document.getElementById("c-ok").textContent=state.ok;
+  document.getElementById("c-warn").textContent=state.warn;
+  document.getElementById("c-bad").textContent=state.bad;
+  summary.classList.toggle("hidden",(state.ok+state.warn+state.bad)===0);
+}
+async function handleFiles(files){
+  for(const file of files){
+    const ph=document.createElement("div");
+    ph.className="card";
+    ph.innerHTML=`<div class="card-head"><div class="stripe" style="background:var(--border)"></div>
+      <div><div class="fname">${esc(file.name)}</div><div class="fmeta">wird geprüft…</div></div>
+      <span class="badge b-warn" style="background:var(--surface-2);color:var(--muted);border-color:var(--border)"><span class="spin"></span>Prüfe</span></div>`;
+    cards.appendChild(ph);
+    let r;
+    try{r=await processFile(file);}
+    catch(e){r={status:"error",container:"?",msg:"Unerwarteter Fehler: "+e.message};}
+    if(r.status==="error")state.bad++; else state[r.status]++;
+    cards.replaceChild(renderCard(file,r),ph);
+    refreshSummary();
+  }
+}
+
+document.getElementById("pick").addEventListener("click",e=>{e.stopPropagation();input.click();});
+drop.addEventListener("click",()=>input.click());
+drop.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();input.click();}});
+input.addEventListener("change",()=>{if(input.files.length)handleFiles([...input.files]);input.value="";});
+["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("hot");}));
+["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();if(ev==="dragleave"&&drop.contains(e.relatedTarget))return;drop.classList.remove("hot");}));
+drop.addEventListener("drop",e=>{const f=e.dataTransfer.files;if(f&&f.length)handleFiles([...f]);});
+document.getElementById("clear").addEventListener("click",()=>{cards.innerHTML="";state.ok=state.warn=state.bad=0;refreshSummary();});
+window.addEventListener("dragover",e=>e.preventDefault());
+window.addEventListener("drop",e=>e.preventDefault());
+
+/* für Selbsttest zugänglich machen */
+window.__erech={parseInvoice,validate,friendlyProfile,extractXmlFromPdf,processFile};
+</script>
